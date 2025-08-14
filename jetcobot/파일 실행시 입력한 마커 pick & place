@@ -1,0 +1,268 @@
+import imutils
+import time
+import cv2
+import numpy as np
+import os
+import argparse
+from datetime import datetime
+from pymycobot.mycobot280 import MyCobot280
+from pymycobot.genre import Angle, Coord
+
+# ----------- JetCobot 초기화 -----------
+mc = MyCobot280('/dev/ttyJETCOBOT', 1000000)
+mc.thread_lock = True
+
+save_dir = "./jetcobot_capture_img"
+os.makedirs(save_dir, exist_ok=True)
+
+def capture_image(frame, label):
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    filename = f"{timestamp}_{label}.jpg"
+    filepath = os.path.join(save_dir, filename)
+    cv2.imwrite(filepath, frame)
+    print(f"[INFO] 사진 저장 완료: {filepath}")
+
+# ----------- 초기 자세 -----------
+# mc.send_angles([0,0,0,0,0,0],50)
+# # time.sleep(3)
+mc.send_angles([0, 117, -150, -4, 1.58, -45.61],50)
+time.sleep(1)
+mc.send_angles([0, 117, -150, -37.96, 1.58, -45.61],50)
+time.sleep(2)
+mc.send_angles([0, 117, -150, -4, 1.58, -45.61],50)
+time.sleep(1)
+mc.send_angles([0, 125, -50, -75, 5, -45], 50,0)
+time.sleep(1)
+mc.set_gripper_value(100, 50)
+time.sleep(1)
+
+# ----------- 카메라 초기화 -----------
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+time.sleep(2)
+
+# ----------- 마커 인식 설정 -----------
+arucoDict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
+arucoParams = cv2.aruco.DetectorParameters()
+detector = cv2.aruco.ArucoDetector(arucoDict, arucoParams)
+
+# ----------- 캘리브레이션 데이터 로딩 -----------
+data = np.load('camera_calibration.npz')
+K = data['K']
+dist = data['dist']
+
+# 마커 3D 좌표계
+marker_length = 0.02
+objp = np.array([
+    [-marker_length/2,  marker_length/2, 0],
+    [ marker_length/2,  marker_length/2, 0],
+    [ marker_length/2, -marker_length/2, 0],
+    [-marker_length/2, -marker_length/2, 0]
+], dtype=np.float32)
+
+# **첫 번째 사진 촬영**
+ret, photo_frame = cap.read()
+for _ in range(5):
+    ret, photo_frame = cap.read()
+    time.sleep(0.05)
+if ret:
+    capture_image(photo_frame, "before")
+    
+# --- 이름 ↔ 마커ID 맵핑 딕셔너리 ---
+name_to_id = {
+    "FileA": 1,
+    "FileB": 2,
+    "FileC": 3,
+    "FileD": 4,
+    
+    "CoffeeA": 5,
+    "CoffeeB": 6,
+    "CoffeeC": 7,
+    "CoffeeD": 8,
+
+    "SnackA": 9,
+    "SnackB": 10,
+    "SnackC": 11,
+    "SnackD": 12
+}
+
+# --- 인자 파서 수정 ---
+ap = argparse.ArgumentParser()
+ap.add_argument("-i", "--id", type=str, required=True, help="추적할 마커 ID(이름 또는 숫자)")
+args = vars(ap.parse_args())
+
+# --- 입력값 처리 ---
+input_value = args["id"]
+
+if input_value in name_to_id:
+    target_id = name_to_id[input_value]
+elif input_value.isdigit():
+    target_id = int(input_value)
+else:
+    print(f"[ERROR] '{input_value}'는 등록된 이름도, 숫자도 아닙니다.")
+    exit()
+
+print(f"[INFO] 마커 ID {target_id} 탐색을 시작합니다.")
+
+# ----------- 탐색 루프 -----------
+found = False
+start_time = time.time()
+search_timeout = 15  # 탐색 시간 제한 (초)
+
+while time.time() - start_time < search_timeout:
+    ret, frame = cap.read()
+    if not ret:
+        print("[ERROR] 프레임을 읽을 수 없습니다.")
+        break
+
+    corners, ids, _ = detector.detectMarkers(frame)
+    if ids is not None:
+        ids = ids.flatten()
+        for i, marker_id in enumerate(ids):
+            if marker_id == target_id:
+                found = True
+                print(f"[INFO] 마커 ID {target_id}")
+                target_corners = corners[i]
+                break
+    if found:
+        break
+
+    cv2.putText(frame, f"마커 {target_id} 탐색 중...", (10, 30),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+    cv2.imshow("Search", frame)
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+# 탐색 종료 후
+try:
+    cv2.destroyWindow("Search")
+except cv2.error:
+    pass
+
+if not found:
+    print(f"[INFO] 마커 ID {target_id}를 찾을 수 없습니다. 프로그램을 종료합니다.")
+    cap.release()
+    cv2.destroyAllWindows()
+    exit()
+
+# ----------- 위치 및 자세 계산 -----------
+imgp = target_corners[0].astype(np.float32)
+success, rvec, tvec = cv2.solvePnP(objp, imgp, K, dist)
+if not success:
+    print("[ERROR] solvePnP 실패")
+    cap.release()
+    cv2.destroyAllWindows()
+    exit()
+
+x, y, z = tvec.reshape(-1) * 1000
+rx, ry, rz = np.degrees(rvec.reshape(-1))
+# print(f"  위치 (mm): x={x:.1f}, y={y:.1f}, z={z:.1f}")
+# print(f"objp: {objp}")
+# print(f"imgp: {corners[i][0]}")
+
+# ----------- 사분면 및 보정값 설정 -----------
+center_x = int(np.mean(target_corners[0][:,0]))
+center_y = int(np.mean(target_corners[0][:,1]))
+H, W = frame.shape[:2]
+x_centered = center_x - W//2
+y_centered = (H//2) - center_y
+if x_centered > 0 and y_centered > 0: quadrant = "++"
+elif x_centered < 0 and y_centered > 0: quadrant = "-+"
+elif x_centered < 0 and y_centered < 0: quadrant = "--"
+else: quadrant = "+-"
+
+corrections = {
+    "++": { "pos": (-75, 0, 50),   "rot": (-85, -47, -95) },
+    "-+": { "pos": (-70, -5, 50), "rot": None },
+    "--": { "pos": (-70, -5, 60),  "rot": None },
+    "+-": { "pos": (-80, 0, 50), "rot": (-80, -47, -95) },
+}
+
+dx, dy, dz = corrections[quadrant]["pos"]
+rot_correction = corrections[quadrant]["rot"]
+
+# ----------- 카메라 좌표 → 로봇 좌표 변환 (사분면 보정 적용) -----------
+x_cam, y_cam, z_cam = x, y, z
+x_robot, y_robot, z_robot = z_cam + dx, -x_cam + dy, -y_cam + dz
+
+# ----------- 로봇 이동 및 픽업 -----------
+current_coords = mc.get_coords()
+target_coords = current_coords.copy()
+target_coords[0] += float(x_robot)
+target_coords[1] += float(y_robot)
+target_coords[2] += float(z_robot)
+
+# 회전 보정 (None이 아닐 때만 덮어쓰기)
+if rot_correction is not None:
+    target_coords[3], target_coords[4], target_coords[5] = rot_correction
+else:
+    target_coords[3] = current_coords[3]
+    target_coords[4] = current_coords[4]
+    target_coords[5] = current_coords[5]
+
+
+# 물건 잡기 자세
+mc.send_angles([0, 40, -140, 100, 0, -45], 50)
+time.sleep(3)
+
+print(f"[INFO] 타겟 좌표로 이동: {target_coords}")
+mc.send_coords(target_coords, 50, 0)
+time.sleep(3)
+
+# 그리퍼 닫기
+print("그리퍼 닫기")
+mc.set_gripper_value(0, 50)
+time.sleep(1)
+
+# 물체 들어올리기
+re_coords = mc.get_coords()
+re_coords[2] += 25
+mc.send_coords(re_coords, 50, 0)
+time.sleep(2)
+
+# # 뒤로 점진적 이동
+# for step in [10, 20, 30, 40, 50]:
+#     temp_coords = mc.get_coords()
+#     temp_coords[0] -= step
+#     mc.send_coords(temp_coords, 50, 0)
+#     time.sleep(0.5)
+
+# 자세복귀
+mc.send_angles([0, 40, -140, 100, 0, -45], 50)
+time.sleep(3)
+
+
+
+# 배출 위치로 이동 및 방출
+mc.send_angles([-95.53, -27.33, -24.08, -39.28, 10.45, -62.84],50)
+time.sleep(3)
+mc.send_coords([-82.5, -267.5, 110, -173.41, 0, -135.64],50,0)
+time.sleep(3)
+print("그리퍼 열기")
+mc.set_gripper_value(100, 50)
+time.sleep(1)
+
+
+# 자세 복귀
+mc.send_angles([-95.53, -22.5, -22.5, -40, 2.5, -45.61],50)
+time.sleep(3)
+mc.send_angles([0, 125, -50, -75, 5, -45], 50,0)
+time.sleep(3)
+
+# **두 번째 사진 촬영 (복귀 후)**
+ret, photo_frame = cap.read()
+for _ in range(5):
+    ret, photo_frame = cap.read()
+    time.sleep(0.05)
+if ret:
+    capture_image(photo_frame, "after")
+time.sleep(3)
+cap.release()
+cv2.destroyAllWindows()
+
+# 대기자세
+mc.send_angles([0, 117, -150, -4, 1.58, -45.61],50)
+time.sleep(3)
+mc.send_angles([0, 117, -150, -37.96, 1.58, -45.61],50)
+time.sleep(3)
