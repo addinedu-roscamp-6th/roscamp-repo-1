@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="text-xl font-bold mb-4">시스템 로그</h2>
+<table class="table-auto w-full border-collapse border border-gray-300">
+    <thead>
+        <tr class="bg-gray-200">
+            <th class="border px-4 py-2">시간</th>
+            <th class="border px-4 py-2">레벨</th>
+            <th class="border px-4 py-2">메시지</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in system_logs %}
+        <tr>
+            <td class="border px-4 py-2">{{ log.time }}</td>
+            <td class="border px-4 py-2">{{ log.level }}</td>
+            <td class="border px-4 py-2">{{ log.message }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}대시보드 · guardian{% endblock %}
+{% block content %}
+
+<div class="row g-3 mb-1">
+  {% for card in summary_cards %}
+  <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div>
+          <div class="text-muted small">{{ card.label }}</div>
+          <div class="fs-3 fw-bold">{{ card.value }}</div>
+        </div>
+        <div class="icon-wrap"><i class="bi bi-{{ card.icon }}"></i></div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-3">
+  <div class="col-12 col-lg-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">최근 보안 이벤트</span>
+        <span class="badge bg-light text-dark">최근 5건</span>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>시간</th><th>종류</th><th>심각도</th><th>메시지</th></tr></thead>
+            <tbody>
+              {% for e in recent_events %}
+              <tr>
+                <td class="text-muted">{{ e.ts }}</td>
+                <td>{{ e.type }}</td>
+                <td>
+                  <span class="badge {{ 'badge-high' if e.severity=='높음' else ('badge-mid' if e.severity=='중간' else 'badge-low') }}">{{ e.severity }}</span>
+                </td>
+                <td class="text-truncate" style="max-width:420px;">{{ e.message }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="fw-semibold">장비 상태</span>
+        <span class="badge bg-light text-dark">{{ devices|length }}대</span>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead><tr><th>이름</th><th>배터리</th><th>상태</th><th>위치</th></tr></thead>
+            <tbody>
+              {% for d in devices %}
+              <tr>
+                <td class="fw-semibold">{{ d.name }}</td>
+                <td>{{ d.battery if d.battery is not none else '-' }}{% if d.battery is not none %}%{% endif %}</td>
+                <td>
+                  <span class="badge {{ 'bg-success' if d.status=='online' else ('bg-warning text-dark' if d.status=='charging' else 'bg-secondary') }}">{{ d.status }}</span>
+                </td>
+                <td class="text-muted">{{ d.location }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="small text-muted mt-2">
+          Uptime: {{ health.uptime }} · CPU: {{ health.cpu }} · RAM: {{ health.ram }} · Disk: {{ health.disk }} · Net: {{ health.network }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card shadow-sm">
+      <div class="card-header"><span class="fw-semibold">다가오는 순찰 일정</span></div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead><tr><th style="width:90px;">시간</th><th>제목</th><th>경로</th><th>담당</th></tr></thead>
+            <tbody>
+              {% for s in schedules %}
+              <tr>
+                <td class="text-muted">{{ s.time }}</td>
+                <td class="fw-semibold">{{ s.title }}</td>
+                <td>{{ s.route }}</td>
+                <td>{{ s.owner }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

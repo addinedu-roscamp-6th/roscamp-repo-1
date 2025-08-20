@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}시스템 로그 · guardian{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-between items-center">
+    <h5 class="m-0">시스템 로그</h5>
+    <div>
+      <a class="btn btn-sm" href="/logs.csv?{{ request.query_string|safe }}">CSV 다운로드</a>
+    </div>
+  </div>
+  <div class="card-body">
+    <form class="row g-2 mb-3" method="get">
+      <div class="col">
+        <input class="form-control" name="name" placeholder="이름 (박진우…)" value="{{ name or '' }}">
+      </div>
+      <div class="col">
+        <select class="form-select" name="level">
+          <option value="">레벨(전체)</option>
+          {% for lv in ['INFO','WARN','ERROR'] %}
+          <option value="{{lv}}" {% if level==lv %}selected{% endif %}>{{lv}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <input class="form-control" type="date" name="from" value="{{ dfrom or '' }}">
+      </div>
+      <div class="col">
+        <input class="form-control" type="date" name="to" value="{{ dto or '' }}">
+      </div>
+      <div class="col">
+        <select class="form-select" name="per_page">
+          {% for n in [10,20,50,100] %}
+          <option value="{{n}}" {% if per_page==n %}selected{% endif %}>{{n}}개/페이지</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary">검색</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr><th>시간</th><th>레벨</th><th>소스</th><th>메시지</th></tr>
+        </thead>
+        <tbody>
+          {% for r in logs %}
+          <tr>
+            <td class="text-muted">{{ r.ts }}</td>
+            <td><span class="badge
+              {{ 'badge-low' if r.level=='INFO' else ('badge-mid' if r.level=='WARN' else 'badge-high') }}">{{ r.level }}</span>
+            </td>
+            <td class="text-muted">{{ r.source }}</td>
+            <td class="text-truncate" style="max-width:560px;">{{ r.message }}</td>
+          </tr>
+          {% endfor %}
+          {% if not logs %}
+          <tr><td colspan="4" class="text-center text-muted">데이터가 없습니다.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-between align-items-center">
+      <small class="text-muted">총 {{ total }}건</small>
+      <div class="pagination">
+        {% for p in range(1, pages+1) %}
+          {% if p == page %}
+            <span class="page-link active">{{p}}</span>
+          {% else %}
+            <a class="page-link" href="?{{ qs(page=p) }}">{{p}}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="text-xl font-bold mb-4">출입 기록</h2>
+<table class="table-auto w-full border-collapse border border-gray-300">
+    <thead>
+        <tr class="bg-gray-200">
+            <th class="border px-4 py-2">시간</th>
+            <th class="border px-4 py-2">이름</th>
+            <th class="border px-4 py-2">구분</th>
+            <th class="border px-4 py-2">상태</th>
+            <th class="border px-4 py-2">인증 방식</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for log in access_logs %}
+        <tr>
+            <td class="border px-4 py-2">{{ log.time }}</td>
+            <td class="border px-4 py-2">{{ log.name }}</td>
+            <td class="border px-4 py-2">{{ log.role }}</td>
+            <td class="border px-4 py-2">{{ log.status }}</td>
+            <td class="border px-4 py-2">{{ log.method }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

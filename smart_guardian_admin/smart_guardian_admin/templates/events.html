@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}보안 이벤트 · guardian{% endblock %}
+{% block content %}
+<div class="card shadow-sm">
+  <div class="card-header d-flex justify-between items-center">
+    <h5 class="m-0">보안 이벤트</h5>
+    <div>
+      <a class="btn btn-sm" href="/events.csv?{{ request.query_string|safe }}">CSV 다운로드</a>
+    </div>
+  </div>
+  <div class="card-body">
+    <form class="row g-2 mb-3" method="get">
+      <div class="col">
+        <select class="form-select" name="kind">
+          <option value="">유형(전체)</option>
+          {% for k in kinds %}
+          <option value="{{k}}" {% if kind==k %}selected{% endif %}>{{k}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <select class="form-select" name="prio">
+          <option value="">우선순위(전체)</option>
+          {% for p in prios %}
+          <option value="{{p}}" {% if prio==p %}selected{% endif %}>{{p}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <select class="form-select" name="status">
+          <option value="">상태(전체)</option>
+          {% for s in stats %}
+          <option value="{{s}}" {% if status==s %}selected{% endif %}>{{s}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <select class="form-select" name="loc">
+          <option value="">위치(전체)</option>
+          {% for l in locs %}
+          <option value="{{l}}" {% if loc==l %}selected{% endif %}>{{l}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <select class="form-select" name="assignee">
+          <option value="">담당(전체)</option>
+          {% for a in assignees %}
+          <option value="{{a}}" {% if assignee==a %}selected{% endif %}>{{a}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <input class="form-control" type="date" name="from" value="{{ dfrom or '' }}">
+      </div>
+      <div class="col">
+        <input class="form-control" type="date" name="to" value="{{ dto or '' }}">
+      </div>
+      <div class="col">
+        <input class="form-control" name="q" placeholder="메시지 키워드" value="{{ q or '' }}">
+      </div>
+      <div class="col">
+        <select class="form-select" name="per_page">
+          {% for n in [10,20,50,100] %}
+          <option value="{{n}}" {% if per_page==n %}selected{% endif %}>{{n}}개/페이지</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary">검색</button>
+      </div>
+    </form>
+
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr><th>ID</th><th>시간</th><th>유형</th><th>우선순위</th><th>상태</th><th>위치</th><th>담당</th><th>메시지</th></tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td class="text-muted">{{ r.id }}</td>
+            <td class="text-muted">{{ r.ts }}</td>
+            <td>{{ r.kind }}</td>
+            <td><span class="badge {{ 'badge-low' if r.prio=='낮음' else ('badge-mid' if r.prio=='중간' else 'badge-high') }}">{{ r.prio }}</span></td>
+            <td>{{ r.status }}</td>
+            <td class="text-muted">{{ r.loc }}</td>
+            <td>{{ r.assignee }}</td>
+            <td class="text-truncate" style="max-width:560px;">{{ r.message }}</td>
+          </tr>
+          {% endfor %}
+          {% if not rows %}
+          <tr><td colspan="8" class="text-center text-muted">데이터가 없습니다.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex justify-between align-items-center">
+      <small class="text-muted">총 {{ total }}건</small>
+      <div class="pagination">
+        {% for p in range(1, pages+1) %}
+          {% if p == page %}
+            <span class="page-link active">{{p}}</span>
+          {% else %}
+            <a class="page-link" href="?{{ qs(page=p) }}">{{p}}</a>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
