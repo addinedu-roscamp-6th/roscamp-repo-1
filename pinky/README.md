@@ -1,8 +1,16 @@
 # - 순찰만 돌리는 코드
 
+## 터미널 1 PC
+
 순찰만 하는 코드.py => pc에서 실행
 
-bringup => pinky에서 실행
+## 터미널 2 Pinky
+
+cd pinky_violet
+
+source ./install/local_setup.bash
+
+ros2 launch pinky_bringup bringup.launch.xml 
 
 
 
