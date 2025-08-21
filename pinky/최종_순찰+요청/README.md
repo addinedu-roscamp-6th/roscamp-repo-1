@@ -1,7 +1,7 @@
 # pinky + jecobot + pickup_web 코드
 
 
-터미널 1 켜서 
+## 터미널 1 켜서 
 
 1. activate_yolo 입력 (가상환경 접속하는거)
    
@@ -14,7 +14,7 @@
 5. ros2 run aruco_navigator pinky_pickup_web
     
    
-터미널 2 켜서 
+## 터미널 2 켜서 
 
 1. ssh pinky@192.168.0.154
  
