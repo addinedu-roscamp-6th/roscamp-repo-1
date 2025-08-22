@@ -102,6 +102,12 @@ class ObstacleAvoidanceNode(Node):
                 twist.angular.y = 0.0
                 twist.angular.z = 0.0
 
+                CORRECTION_ANGULAR = 0.0248  # 라디안/초 단위, 실험적으로 조정 필요
+
+                twist.linear.x = self.drive_speed
+                twist.angular.z = CORRECTION_ANGULAR
+
+
         elif self.state == 'STOPPED':
             if math.isnan(self.d_f) or self.d_f >= self.obs_detect_thresh:
                 self.state = 'DRIVING'
