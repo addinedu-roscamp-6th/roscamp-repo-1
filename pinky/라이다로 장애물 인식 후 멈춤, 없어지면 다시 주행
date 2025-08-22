@@ -36,15 +36,6 @@ class ObstacleAvoidanceNode(Node):
         self.create_timer(1/200.0, self.control_loop)
         self.get_logger().info("장애물 감지 및 정지 노드 시작.")
 
-    def fall_callback(self, msg: String):
-        """쓰러짐 감지 시 로봇 정지."""
-        if 'FallDetected' in msg.data:
-            self.is_fall_detected = True
-            self.get_logger().warn("쓰러짐 감지! 로봇을 멈춥니다.")
-        elif 'Normal Driving' in msg.data:
-            self.is_fall_detected = False
-            self.get_logger().info("쓰러짐 상태 해제. 주행을 재개합니다.")
-
     def get_min_dist(self, ranges):
         valid_ranges = ranges[(ranges > 0.0) & ~np.isinf(ranges)]
         return float(np.min(valid_ranges)) if valid_ranges.size > 0 else float('nan')
@@ -77,11 +68,6 @@ class ObstacleAvoidanceNode(Node):
     def control_loop(self):
         """장애물 감지 및 정지를 실행하는 메인 제어 루프입니다."""
         twist = Twist()
-
-        # 쓰러짐 감지 시 모든 동작을 중단합니다.
-        if self.is_fall_detected:
-            self.cmd_pub.publish(Twist())
-            return
 
         # 장애물 감지 및 정지 로직
         if self.state == 'DRIVING':
