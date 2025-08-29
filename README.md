@@ -53,3 +53,15 @@
 
 
 ## 👥 역할분담
+
+| 담당 업무 | 이름 |
+|-----|-----|
+| **YOLO (쓰러짐 감지)** | 김성민, 위다인 |
+| **자율 주행 및 Path Planning** | 박지안, 서원우, 위다인 |
+| **DB** |  김성민, 이동연 |
+| **얼굴인식** | 이동연 |
+| **로봇팔 제어** |  박진우, 백기광 |
+| **Web 기반 연동 및 통합 제어** | 김성민, 위다인 |
+| **GUI** | 김성민, 박진우, 백기광, 이동연 |
+
+[1팀 최종 ppt 자료](<https://docs.google.com/presentation/d/1WiwNvU6zXkpr6sOqes_zbciIVpUQkfIj8enjXyJ0BXs/edit?usp=sharing>)
